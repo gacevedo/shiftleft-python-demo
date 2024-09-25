@@ -2,7 +2,6 @@ import pickle
 import base64
 from pathlib import Path
 import subprocess
-
 from flask import Blueprint, request, jsonify, session
 
 bp = Blueprint("actions", __name__)
@@ -60,3 +59,5 @@ def deserialized_descr():
     # vulnerability: Insecure Deserialization
     deserialized = pickle.loads(data)
     return jsonify({"success": True, "description": str(deserialized)})
+
+
