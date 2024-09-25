@@ -6,7 +6,6 @@ from flask import Blueprint, request, jsonify, session
 
 bp = Blueprint("actions", __name__)
 
-
 @bp.route("/message", methods=["POST"])
 def log_entry():
     user_info = session.get("user_info", None)
@@ -31,15 +30,14 @@ def log_entry():
     filename = filename_param + ".txt"
     path = Path(user_dir + "/" + filename)
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
-
 
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None:
+        return jsonify({"error": "name parameter is required"})
     res = subprocess.run(
         ["ps aux | grep " + name + " | awk '{print $11}'"],
         shell=True,
@@ -51,13 +49,15 @@ def grep_processes():
     names = out.split("\n")
     return jsonify({"success": True, "names": names})
 
-
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
     pickled = request.form.get('pickled')
+    if pickled is None:
+        return jsonify({"error": "pickled parameter is required"})
     data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
     deserialized = pickle.loads(data)
     return jsonify({"success": True, "description": str(deserialized)})
+
+
 
 
