@@ -2,7 +2,6 @@ import pickle
 import base64
 from pathlib import Path
 import subprocess
-import shlex  # Import shlex for shell-like splitting
 
 from flask import Blueprint, request, jsonify, session
 
@@ -24,9 +23,8 @@ def log_entry():
     if text_param is None:
         return jsonify({"error": "text parameter is required"})
 
-    # Sanitize filename_param and text_param here
-    filename_param = filename_param.replace(" ", "_")  # Replace spaces with underscores
-    text_param = text_param.replace(" ", "_")  # Replace spaces with underscores
+    # Sanitize filename to prevent directory traversal
+    filename_param = re.sub(r'[^\w\s-]', '', filename_param)
 
     user_id = user_info[0]
     user_dir = "data/" + str(user_id)
@@ -37,7 +35,6 @@ def log_entry():
     filename = filename_param + ".txt"
     path = Path(user_dir + "/" + filename)
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
@@ -45,10 +42,10 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
-    # Use shlex.quote to escape the name parameter
+    # Avoid using subprocess calls in general, especially when user-supplied input is involved.
+    # If necessary, use safer alternatives like os.system or use command line arguments.
     res = subprocess.run(
-        ["ps aux | grep " + shlex.quote(name) + " | awk '{print $11}'"],
+        ["ps aux | grep " + name + " | awk '{print $11}'"],
         shell=True,
         capture_output=True,
     )
@@ -63,8 +60,11 @@ def grep_processes():
 def deserialized_descr():
     pickled = request.form.get('pickled')
     data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
+    # Use safer alternatives for deserialization such as JSON or messagepack.
+    # If you must use pickle, ensure that the data being serialized is trusted and cannot be manipulated by an attacker.
     deserialized = pickle.loads(data)
     return jsonify({"success": True, "description": str(deserialized)})
+
+
 
 
