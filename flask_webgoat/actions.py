@@ -2,6 +2,7 @@ import pickle
 import base64
 from pathlib import Path
 import subprocess
+import shlex  # Import shlex for shell-like splitting
 
 from flask import Blueprint, request, jsonify, session
 
@@ -23,6 +24,10 @@ def log_entry():
     if text_param is None:
         return jsonify({"error": "text parameter is required"})
 
+    # Sanitize filename_param and text_param here
+    filename_param = filename_param.replace(" ", "_")  # Replace spaces with underscores
+    text_param = text_param.replace(" ", "_")  # Replace spaces with underscores
+
     user_id = user_info[0]
     user_dir = "data/" + str(user_id)
     user_dir_path = Path(user_dir)
@@ -41,8 +46,9 @@ def log_entry():
 def grep_processes():
     name = request.args.get("name")
     # vulnerability: Remote Code Execution
+    # Use shlex.quote to escape the name parameter
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
+        ["ps aux | grep " + shlex.quote(name) + " | awk '{print $11}'"],
         shell=True,
         capture_output=True,
     )
@@ -60,3 +66,5 @@ def deserialized_descr():
     # vulnerability: Insecure Deserialization
     deserialized = pickle.loads(data)
     return jsonify({"success": True, "description": str(deserialized)})
+
+
